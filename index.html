@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="tr" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Öğrenci Not Takip Sistemi</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { darkMode: 'class' };
+    </script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Excel Aktarma (SheetJS ile) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- jsPDF kütüphanesi -->
+    <!-- jsPDF + Türkçe karakter destekli font -->
+    <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.plugin.standard_fonts_metrics.min.js"></script>
+    <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.plugin.split_text_to_size.min.js"></script>
+    <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.plugin.ttf.min.js"></script>
+    <!-- JSZip kütüphanesi -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  </head>
+
+  <body class="dark:bg-gray-900 bg-gray-100 text-gray-900 dark:text-white h-full min-h-screen flex flex-col">
+
+
+<header class="flex flex-col sm:flex-row justify-end items-center gap-2 m-4">
+    <div class="flex items-center gap-2 text-xl"></div>
+  <!-- Tema Butonu -->
+  <button onclick="toggleDarkMode()" title="DarkMode" class="bg-gray-300 dark:bg-gray-700 px-3 py-2 rounded hover:opacity-90 transition">🌗</button>
+  <!-- Dil Seçici -->
+   <div class="languages">
+    <button data-use="tr" data-dil="tr" onclick="dilDegistir('tr')" title="Türkçe" alt="turkish" class="bg-gray-300 dark:bg-gray-700 px-3 py-2 rounded hover:opacity-90 transition">🇹🇷</button>
+    <button data-use="en" data-dil="en" onclick="dilDegistir('en')" title="English" alt="english" class="bg-gray-300 dark:bg-gray-700 px-3 py-2 rounded hover:opacity-90 transition">🇺🇸</button>
+   </div>
+    
+  </div>
+</header>
+   
+
+    <!-- 🧱 Ana 3 Sütunlu Yapı -->
+    <main class="flex flex-col lg:flex-row gap-4 px-2 lg:px-4 pb-6 flex-1 overflow-y-auto max-h-[calc(100vh-80px)]">
+
+
+
+      <!-- Sol: Form -->
+      <section class="w-full lg:w-1/3 bg-white dark:bg-gray-800 p-6 rounded-xl shadow">
+        <h2 data-Language="ogrenciTakipBasligi" id="ogrenciTakipBasligi" class="text-xl font-bold mb-4 text-center">Öğrenci Not Takip Sistemi</h2>
+        <div class="flex flex-col gap-4">
+            <input type="text" id="ad" placeholder="Ad"
+                 class="p-2 rounded border focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600" />
+
+            <input type="text" id="soyad" placeholder="Soyad"
+                 class="p-2 rounded border focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600" />
+
+            <input type="number" id="not1" placeholder="1. Not"
+                 class="p-2 rounded border focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600" />
+
+            <input type="number" id="not2" placeholder="2. Not"
+                 class="p-2 rounded border focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600" />
+
+            <input type="number" id="not3" placeholder="3. Not"
+                 class="p-2 rounded border focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600" />
+                 <input type="text" id="sinif" placeholder="Sınıf (örn: 9A)" 
+                 class="p-2 rounded border focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600" />
+                 <button data-Language="ortalama" onclick="hesapla()" id="ortalama" class="bg-blue-500 hover:bg-blue-600 text-white py-2 rounded">Ortalama Hesapla</button>
+
+          <div id="sonuc" class="text-center font-medium mt-2"></div>
+        </div>
+      </section>
+
+
+
+
+
+
+
+
+      <!-- Orta: Liste + Filtre -->
+      <section class="w-full lg:w-1/3 flex flex-col bg-white dark:bg-gray-800 p-6 rounded-xl shadow">
+        <h2 data-Language="studentList" id="studentList" class="text-xl font-bold mb-2 text-center">Öğrenci Listesi</h2>
+
+        <!-- Arama -->
+        <input id="aramaInput" type="text" placeholder="Öğrenci Ara..."
+               class="w-full mb-4 p-2 border rounded focus:ring-2 dark:bg-gray-700 dark:border-gray-600" />
+
+        <!-- Filtre Butonları -->
+        <div class="w-100 flex flex-wrap gap-2 mb-4">
+          <button data-Language="tumu" id="tumu"  onclick="filtreyiAyarla('tum')" class="filtreBtn bg-blue-500 text-white px-3 py-1 rounded">Tümü</button>
+          <button data-Language="basarili" id="basarili" onclick="filtreyiAyarla('basarili')" class="filtreBtn bg-yellow-500 text-white px-3 py-1 rounded">Başarılı 🌟</button>
+          <button data-Language="gecti" id="gecti" onclick="filtreyiAyarla('gecti')" class="filtreBtn bg-green-500 text-white px-3 py-1 rounded">Geçti ✅</button>
+          <button data-Language="kaldi" id="kaldi" onclick="filtreyiAyarla('kaldi')" class="filtreBtn bg-red-500 text-white px-3 py-1 rounded">Kaldı ❌</button>
+        </div>
+
+        <!-- Liste -->
+        <ul id="ogrenciListesi" class="space-y-2 overflow-y-auto max-h-[400px] pr-2"></ul>
+        <!-- Liste Alanına -->
+            <button data-Language="trash" onclick="copKutusunuAc()" class="bg-zinc-500 hover:bg-zinc-600 text-white py-2 rounded w-full mt-3">
+            ♻️ Çöp Kutusu
+            </button>
+
+<!-- Alt Butonlar (Sil, Sırala, Aktar) -->
+<div class="grid grid-cols-2 gap-2 mt-4">
+
+    <!-- Tüm Verileri Sil -->
+    <button data-Language="iceAktar" onclick="verileriSifirla()" class="bg-red-600 hover:bg-red-700 text-white py-2 rounded">
+      🗑️ Tüm Verileri Sil
+    </button>
+  
+    <!-- Sırala -->
+    <button data-Language="listele" id="listele" onclick="filtreleSirala()" class="bg-purple-600 hover:bg-purple-700 text-white py-2 rounded">
+      📊 Sırala
+    </button>
+  
+    <!-- Veri Dışa Aktar -->
+    <div class="relative">
+      <button data-Language="disaAktar" id="disaAktar" onclick="toggleAktarMenu()" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-2 rounded">
+        📤 Veri Dışa Aktar
+      </button>
+
+      <div id="aktarMenu" class="hidden absolute left-0 mt-1 w-full bg-white dark:bg-gray-800 shadow-lg rounded z-10">
+        <button onclick="verileriDisariAktar('json')" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left">📦 JSON</button>
+        <button onclick="verileriDisariAktar('xml')" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left">🗂 XML</button>
+        <button onclick="verileriDisariAktar('excel')" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left">📊 Excel</button>
+        <button onclick="verileriDisariAktar('pdf')" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left">📄 PDF</button>
+      </div>
+    </div>
+     <!-- Verileri İçe Aktar -->
+     <label  data-Language="iceAktar" id="iceAktar" for="importInput" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 px-4 rounded cursor-pointer text-center">
+        📥 Verileri İçe Aktar
+        <input type="file" id="importInput" accept=".json,.xml,.csv" class="hidden" onchange="verileriIceriAktar(event)">
+      </label>
+    <button onclick="verileriZiple()" class="bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded w-full">
+        📦 Verileri Yedekle (ZIP)
+      </button>
+    <input type="file" id="zipYukleInput" accept=".zip" class="hidden" onchange="ziptenVeriYukle(event)">
+    <label for="zipYukleInput" class="cursor-pointer bg-blue-600 text-white px-3 py-2 rounded">
+      🔁 Yedekten Yükle (ZIP)
+    </label>
+   
+</div>  
+</div>
+
+      </section>
+
+
+
+
+
+
+
+
+      <!-- Sağ: Grafik -->
+      <section class="w-full lg:w-1/3 flex flex-col bg-white dark:bg-gray-800 p-6 rounded-xl shadow">
+        <h2  data-Language="" id="grafikBasligi" class="text-xl font-bold mb-4 text-center">Başarı Grafiği</h2>
+        <div class="flex gap-2 justify-center m-4">
+            <button  data-Language="" id="genelGrafik" onclick="grafikModuAyarla('donut')" class="bg-blue-500 text-white px-3 py-1 rounded">🎯 Genel Grafik</button>
+            <button  data-Language="" id="tarihliGrafik" onclick="grafikModuAyarla('tarih')" class="bg-orange-500 text-white px-3 py-1 rounded">📆 Tarihli Grafik</button>
+          </div>
+        <div class="flex-1">
+          <canvas id="grafik" class="w-full h-full max-h-[300px]"></canvas>
+          <p id="basariOraniText" class="text-center mt-2 font-semibold text-lg"></p>
+          <div id="ilkUc" class="mt-4 text-sm lg:text-base space-y-1 text-center dark:text-white font-medium"></div>
+        </div>  
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+    <!-- ♻️ Çöp Kutusu Modalı -->
+<div id="copModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex justify-center items-center">
+    <div class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white p-6 rounded-lg w-full max-w-md relative">
+      <button onclick="kapatCopModal()" class="absolute top-2 right-2 text-xl">❌</button>
+      <h3  data-Language="" id="trash" class="text-lg font-bold mb-4">🗑️ Çöp Kutusu</h3>
+      <ul id="copListesi" class="space-y-3 max-h-[300px] overflow-y-auto"></ul>
+      <div class="mt-4 flex justify-end gap-2">
+        <button  data-Language="" onclick="copuTemizle()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded">Tümünü Temizle</button>
+        <button onclick="kapatCopModal()"  data-Language="" class="bg-gray-400 hover:bg-gray-500 text-white px-3 py-1 rounded">Kapat</button>
+      </div>
+    </div>
+  </div>
+<!-- Öğrenci Detay Modalı -->
+<div id="ogrenciModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex justify-center items-center">
+    <div class="bg-white dark:bg-gray-800 text-gray-800 dark:text-white p-6 rounded-lg w-80 max-w-[90%] relative">
+      <button onclick="kapatModal()" class="absolute top-2 right-2 text-xl">❌</button>
+      <h3 class="text-lg font-bold mb-2" id="modalAdSoyad">👤 Ad Soyad</h3>
+      <p data-Language="" id="modalOrtalama">📊 Ortalama: </p>
+      <p data-Language="" id="modalNotlar">📋 Notlar: </p>
+      <p data-Language="" id="modalDurum">✅ Durum: </p>
+      <p data-Language="" id="modalTarih">📅 Eklenme: </p>
+    </div>
+  </div>
+    <!-- Bildirim Kutusu -->
+<div id="toast" class="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow-lg opacity-0 pointer-events-none transition duration-500 z-50">
+    ✅ Başarılı işlem
+  </div>
+
+
+  
+  </body>
+</html>
